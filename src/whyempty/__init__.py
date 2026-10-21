@@ -1,8 +1,21 @@
 """Explain why sequential Python filters eliminate records, without dependencies."""
 
+from .audit import AuditResult
 from .core import FilterError, Trace, trace
-from .models import Rejection, Step
+from .models import FilterStats, Rejection, Relaxation, Step
+from .pipeline import Pipeline
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
-__all__ = ["FilterError", "Rejection", "Step", "Trace", "__version__", "trace"]
+__all__ = [
+    "AuditResult",
+    "FilterError",
+    "FilterStats",
+    "Pipeline",
+    "Rejection",
+    "Relaxation",
+    "Step",
+    "Trace",
+    "__version__",
+    "trace",
+]

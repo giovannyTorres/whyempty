@@ -25,9 +25,8 @@ source and wheel distributions.
 
 ## Preparing a release
 
-Version 0.1.0 is prepared for publication; this repository does not automatically
-publish releases. Synchronize the version in `pyproject.toml` and
-`src/whyempty/__init__.py` for subsequent releases. Run all checks above, then:
+Synchronize the version in `pyproject.toml` and `src/whyempty/__init__.py` for
+subsequent releases. Run all checks above, then:
 
 ```sh
 python -m build
@@ -39,9 +38,29 @@ Inspect the archives to confirm that code, `py.typed`, metadata, README and the 
 license are present. Build from a clean checkout so `dist/` contains only the
 intended version; never upload stale artifacts.
 
-Publication requires the maintainer's explicit authorization and credentials.
+### Publishing with GitHub Actions
+
+Publication requires the maintainer's authorization and a PyPI API token. Store
+the token as a repository Actions secret named `TWINE_PASSWORD`; never put it in
+source code, issues, chat, or workflow input fields. The workflow supplies the
+required `__token__` username automatically.
+
+After reviewing a version on `main`, open **Actions → Publish to PyPI → Run
+workflow**, select `main`, and run it. A maintainer can also start publication by
+creating a `release/pypi-*` branch at the reviewed commit. Ordinary pushes to
+`main` do not publish anything.
+
+The workflow checks the secret is configured, runs tests, coverage, lint and type
+checks, builds distributions, validates them, and uploads them to PyPI. It never
+prints the token and does not skip existing uploads. Check the workflow result,
+then verify the version from a fresh environment using `pip install whyempty`.
+PyPI does not allow replacing an existing distribution; increment the version
+for subsequent releases.
+
+### Publishing locally
+
 Confirm package-name ownership on TestPyPI and PyPI before uploading. These are
-manual maintainer commands, **not steps to run while implementing the library**:
+manual maintainer commands for an authorized release:
 
 ```sh
 python -m twine upload --repository testpypi dist/*

@@ -1,0 +1,58 @@
+name: Publish to PyPI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["release/pypi-*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pypi-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate distributions and publish to PyPI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PyPI token is configured
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: |
+          if [ -z "$TWINE_PASSWORD" ]; then
+            echo "::error::Add the PyPI API token as the repository Actions secret TWINE_PASSWORD."
+            exit 1
+          fi
+      - name: Check out release source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install development tools
+        run: python -m pip install -e '.[dev]'
+      - name: Test with at least 95 percent coverage
+        run: python -m pytest --cov=whyempty --cov-report=term-missing --cov-fail-under=95
+      - name: Check lint
+        run: python -m ruff check .
+      - name: Check formatting
+        run: python -m ruff format --check .
+      - name: Check types
+        run: python -m mypy
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Validate distribution metadata
+        run: python -m twine check dist/*
+      - name: Upload distributions to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: >-
+          python -m twine upload --non-interactive
+          --repository-url https://upload.pypi.org/legacy/ dist/*

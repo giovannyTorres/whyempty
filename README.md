@@ -76,8 +76,8 @@ rules = (
     .keep("Mexico", lambda row: row["country"] == "MX")
     .keep("Score >= 80", lambda row: row["score"] >= 80)
 )
-traced = rules.run(records)       # Sequential Trace, as above.
-audited = rules.audit(records)   # Every rule on every occurrence.
+traced = rules.run(records)  # Sequential Trace, as above.
+audited = rules.audit(records)  # Every rule on every occurrence.
 print(audited.explain())
 ```
 

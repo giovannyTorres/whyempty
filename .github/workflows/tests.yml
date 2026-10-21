@@ -1,0 +1,102 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m pytest --cov=whyempty --cov-report=term-missing
+      - run: python examples/basic_usage.py
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -e '.[dev]'
+      - run: python -m ruff check .
+      - run: python -m ruff format --check .
+      - run: python -m mypy
+
+  distributions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      - run: python -m build
+      - run: python -m twine check dist/*
+      - name: Inspect distribution contents and runtime dependencies
+        run: |
+          python - <<'PY'
+          import email
+          import tarfile
+          import zipfile
+          from pathlib import Path
+
+          wheel = next(Path("dist").glob("*.whl"))
+          sdist = next(Path("dist").glob("*.tar.gz"))
+          required = {
+              "__init__.py", "core.py", "models.py", "formatting.py", "py.typed"
+          }
+          with zipfile.ZipFile(wheel) as archive:
+              files = set(archive.namelist())
+              assert all(f"whyempty/{name}" in files for name in required)
+              assert any(name.endswith("/licenses/LICENSE") for name in files)
+              metadata_name = next(name for name in files if name.endswith("/METADATA"))
+              metadata = email.message_from_bytes(archive.read(metadata_name))
+              assert metadata["Version"] == "0.1.0"
+              assert metadata["Requires-Python"] == ">=3.10"
+              assert all(
+                  "extra ==" in requirement
+                  for requirement in metadata.get_all("Requires-Dist", [])
+              ), "Unexpected required runtime dependency"
+          with tarfile.open(sdist) as archive:
+              files = set(archive.getnames())
+              prefix = "whyempty-0.1.0/"
+              assert all(prefix + "src/whyempty/" + name in files for name in required)
+              required_source = [
+                  "LICENSE", "README.md", "pyproject.toml", "CONTRIBUTING.md",
+                  "examples/basic_usage.py", "benchmarks/benchmark.py",
+                  "benchmarks/results.json", "docs/design.md",
+              ]
+              assert all(prefix + name in files for name in required_source)
+          PY
+      - name: Install wheel and exercise installed package
+        run: |
+          python -m venv /tmp/whyempty-wheel
+          /tmp/whyempty-wheel/bin/python -m pip install --no-deps dist/*.whl
+          cd /tmp
+          /tmp/whyempty-wheel/bin/python -c 'from whyempty import trace; result = trace([1, 2]).keep("none", lambda x: False); assert result.count == 0; assert "EMPTY" in result.explain()'
+      - name: Build an installable wheel from the sdist
+        run: python -m pip wheel --no-deps --wheel-dir /tmp/whyempty-from-sdist dist/*.tar.gz

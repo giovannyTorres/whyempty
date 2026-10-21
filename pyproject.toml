@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whyempty"
+version = "0.1.0"
+description = "Explain where Python filters remove your records."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Giovanny Torres" }]
+keywords = ["filter", "debugging", "diagnostics", "iterables"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Software Development :: Debuggers",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/giovannyTorres/whyempty"
+Repository = "https://github.com/giovannyTorres/whyempty"
+Issues = "https://github.com/giovannyTorres/whyempty/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=6.0",
+    "ruff>=0.11.0",
+    "mypy>=1.15",
+    "build>=1.2",
+    "twine>=6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+whyempty = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.coverage.run]
+branch = true
+source = ["whyempty"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/whyempty"]

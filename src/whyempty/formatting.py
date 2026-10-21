@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .models import Step
+from .models import FilterStats, Relaxation, Step
 
 
 def format_explanation(initial_count: int, count: int, steps: Sequence[Step]) -> str:
@@ -54,4 +54,58 @@ def format_explanation(initial_count: int, count: int, steps: Sequence[Step]) ->
     skipped = [f"{step.index}. {step.name}" for step in steps if step.skipped]
     if skipped:
         lines.append("Skipped (received zero records): " + ", ".join(skipped))
+    return "\n".join(lines)
+
+
+def format_audit_explanation(
+    initial_count: int,
+    count: int,
+    filters: Sequence[FilterStats],
+    elapsed_seconds: float,
+    suggestions: Sequence[Relaxation],
+) -> str:
+    """Format independent outcomes without accessing records or predicates."""
+    labels = [f"{entry.index}. {entry.name}" for entry in filters]
+    name_width = max([len("Filter"), *(len(label) for label in labels)])
+    number_width = max(len("Evaluated"), len(str(initial_count)))
+    header = (
+        f"{'Filter':<{name_width}}  {'Evaluated':>{number_width}}  "
+        f"{'Passed':>{number_width}}  {'Failed':>{number_width}}  {'Only blocker':>12}"
+    )
+    lines = [
+        "whyempty | Independent filter audit",
+        f"Initial records: {initial_count}",
+        "Each filter was evaluated independently on every input occurrence.",
+        "Only blocker: records failing that filter and no other.",
+        header,
+        "-" * len(header),
+    ]
+    for label, entry in zip(labels, filters, strict=True):
+        lines.append(
+            f"{label:<{name_width}}  {entry.tested:>{number_width}}  "
+            f"{entry.passed:>{number_width}}  {entry.failed:>{number_width}}  "
+            f"{entry.exclusive_failures:>12}"
+        )
+    if not filters:
+        lines.append("No filters applied.")
+    lines.append("Result: EMPTY" if count == 0 else f"Result: {count} records")
+    lines.append(f"Audit time (ms): {elapsed_seconds * 1000:.3f}")
+    if initial_count == 0:
+        lines.append("The collection was empty from the start; no records can be restored.")
+    elif count:
+        lines.append("Records already satisfy every filter; no relaxation is needed.")
+    else:
+        lines.append("No record passed every filter.")
+        lines.append("Fewest filters to disable (recorded outcomes):")
+        for suggestion in suggestions:
+            disabled = ", ".join(
+                f"{index}. {name}"
+                for index, name in zip(
+                    suggestion.filter_indices, suggestion.filter_names, strict=True
+                )
+            )
+            lines.append(
+                f"- {disabled}: {suggestion.remaining} records ({suggestion.rescued} rescued)"
+            )
+        lines.append("Projections use recorded outcomes; stable predicates reproduce these counts.")
     return "\n".join(lines)

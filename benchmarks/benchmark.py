@@ -1,4 +1,4 @@
-"""Compare traced filtering with equivalent sequential list comprehensions.
+"""Compare sequential tracing and complete audits with Python filtering.
 
 Run from the repository after installing whyempty, for example::
 
@@ -23,7 +23,16 @@ from pathlib import Path
 from time import get_clock_info, perf_counter
 from typing import TypedDict
 
-from whyempty import Trace, __version__, trace
+from whyempty import AuditResult, Pipeline, Relaxation, Trace, __version__, trace
+
+SCENARIO_NAMES = (
+    "python",
+    "whyempty",
+    "whyempty_explain",
+    "python_all",
+    "audit",
+    "audit_explain",
+)
 
 
 class Measurement(TypedDict):
@@ -38,6 +47,11 @@ class Measurement(TypedDict):
     time_overhead_percent: float
     peak_ratio_to_python: float
     peak_overhead_percent: float
+    baseline_scenario: str
+    time_ratio_to_equivalent_baseline: float
+    time_overhead_percent_to_equivalent_baseline: float
+    peak_ratio_to_equivalent_baseline: float
+    peak_overhead_percent_to_equivalent_baseline: float
 
 
 def positive_int(value: str) -> int:
@@ -90,13 +104,19 @@ def measure_memory(operation: Callable[[], object], *, repeat: int) -> list[int]
 def benchmark_size(
     size: int, *, repeat: int, number: int, warmup: int, memory_repeat: int
 ) -> list[Measurement]:
-    """Validate equivalent outputs and benchmark three operations for one size."""
+    """Validate equivalent survivors and benchmark six operations for one size."""
     data = list(range(size))
     threshold = size * 0.8
     predicates: tuple[Callable[[int], bool], ...] = (
         lambda value: value % 2 == 0,
         lambda value: value < threshold,
         lambda value: value % 5 == 0,
+    )
+    pipeline = (
+        Pipeline[int]()
+        .keep("Even", predicates[0])
+        .keep("Below 80%", predicates[1])
+        .keep("Divisible by 5", predicates[2])
     )
 
     def conventional() -> list[int]:
@@ -116,19 +136,55 @@ def benchmark_size(
         result = traced()
         return result, result.explain()
 
+    def conventional_all() -> list[int]:
+        # Materializing every decision deliberately prevents predicate short-circuiting.
+        return [value for value in data if all([predicate(value) for predicate in predicates])]
+
+    def audited() -> AuditResult[int]:
+        return pipeline.audit(data)
+
+    def audit_diagnosed() -> tuple[
+        AuditResult[int], str, Relaxation, tuple[int, ...], tuple[Relaxation, ...]
+    ]:
+        result = audited()
+        return (
+            result,
+            result.explain(),
+            result.relax(2),
+            result.matching_indices(without=(2,)),
+            result.suggest_relaxations(),
+        )
+
     expected = tuple(conventional())
     trace_result = traced()
     diagnosed_result, explanation = diagnosed()
-    if trace_result.items != expected or diagnosed_result.items != expected:
+    full_baseline = tuple(conventional_all())
+    audit_result = audited()
+    diagnosed_audit, audit_explanation, relaxation, matching, suggestions = audit_diagnosed()
+    survivors = (
+        trace_result.items,
+        diagnosed_result.items,
+        full_baseline,
+        audit_result.items,
+        diagnosed_audit.items,
+    )
+    if any(items != expected for items in survivors):
         raise RuntimeError(f"filtering results differ for size {size}")
-    if not explanation:
+    if not explanation or not audit_explanation:
         raise RuntimeError("explain() returned an empty diagnostic")
-    del expected, trace_result, diagnosed_result, explanation
+    if suggestions:
+        raise RuntimeError("nonempty audit unexpectedly suggested relaxing rules")
+    del expected, trace_result, diagnosed_result, explanation, full_baseline
+    del audit_result, diagnosed_audit, audit_explanation, suggestions, survivors
+    del relaxation, matching
 
     operations: tuple[tuple[str, Callable[[], object]], ...] = (
         ("python", conventional),
         ("whyempty", traced),
         ("whyempty_explain", diagnosed),
+        ("python_all", conventional_all),
+        ("audit", audited),
+        ("audit_explain", audit_diagnosed),
     )
     timings = measure_times(operations, repeat=repeat, number=number, warmup=warmup)
     measurements: list[Measurement] = []
@@ -146,16 +202,38 @@ def benchmark_size(
                 "time_overhead_percent": 0.0,
                 "peak_ratio_to_python": 1.0,
                 "peak_overhead_percent": 0.0,
+                "baseline_scenario": "python",
+                "time_ratio_to_equivalent_baseline": 1.0,
+                "time_overhead_percent_to_equivalent_baseline": 0.0,
+                "peak_ratio_to_equivalent_baseline": 1.0,
+                "peak_overhead_percent_to_equivalent_baseline": 0.0,
             }
         )
     baseline = measurements[0]
+    full_baseline_measurement = measurements[3]
     for measurement in measurements:
+        equivalent = (
+            full_baseline_measurement
+            if measurement["scenario"] in ("python_all", "audit", "audit_explain")
+            else baseline
+        )
+        measurement["baseline_scenario"] = equivalent["scenario"]
         time_ratio = measurement["median_seconds"] / baseline["median_seconds"]
         peak_ratio = measurement["median_peak_bytes"] / baseline["median_peak_bytes"]
         measurement["time_ratio_to_python"] = time_ratio
         measurement["time_overhead_percent"] = (time_ratio - 1.0) * 100.0
         measurement["peak_ratio_to_python"] = peak_ratio
         measurement["peak_overhead_percent"] = (peak_ratio - 1.0) * 100.0
+        equivalent_time_ratio = measurement["median_seconds"] / equivalent["median_seconds"]
+        equivalent_peak_ratio = measurement["median_peak_bytes"] / equivalent["median_peak_bytes"]
+        measurement["time_ratio_to_equivalent_baseline"] = equivalent_time_ratio
+        measurement["time_overhead_percent_to_equivalent_baseline"] = (
+            equivalent_time_ratio - 1.0
+        ) * 100.0
+        measurement["peak_ratio_to_equivalent_baseline"] = equivalent_peak_ratio
+        measurement["peak_overhead_percent_to_equivalent_baseline"] = (
+            equivalent_peak_ratio - 1.0
+        ) * 100.0
     return measurements
 
 
@@ -163,8 +241,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     """Run the benchmark and optionally write complete results as JSON."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sizes", nargs="+", type=positive_int, default=[1000, 10000, 100000])
-    parser.add_argument("--repeat", type=positive_int, default=7)
-    parser.add_argument("--number", type=positive_int, default=10)
+    parser.add_argument("--repeat", type=positive_int, default=12)
+    parser.add_argument("--number", type=positive_int, default=20)
     parser.add_argument("--warmup", type=positive_int, default=3)
     parser.add_argument("--memory-repeat", type=positive_int, default=3)
     parser.add_argument("--json-output", type=Path)
@@ -173,7 +251,10 @@ def main(argv: Sequence[str] | None = None) -> None:
         parser.error("run without an external tracemalloc profiler")
 
     results = []
-    print("Size     Scenario              Median ms   Peak KiB   Time x   Peak x")
+    print(
+        "Size     Scenario              Median ms   Peak KiB   Time/Py   Peak/Py"
+        "   Time/Base   Peak/Base"
+    )
     for size in args.sizes:
         measurements = benchmark_size(
             size,
@@ -188,12 +269,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                 f"{size:>7}  {measurement['scenario']:<20}"
                 f" {measurement['median_seconds'] * 1000:>10.3f}"
                 f" {measurement['median_peak_bytes'] / 1024:>10.2f}"
-                f" {measurement['time_ratio_to_python']:>8.2f}"
-                f" {measurement['peak_ratio_to_python']:>8.2f}"
+                f" {measurement['time_ratio_to_python']:>9.2f}"
+                f" {measurement['peak_ratio_to_python']:>9.2f}"
+                f" {measurement['time_ratio_to_equivalent_baseline']:>11.2f}"
+                f" {measurement['peak_ratio_to_equivalent_baseline']:>11.2f}"
             )
 
     clock = get_clock_info("perf_counter")
-    scenario_order = ["python", "whyempty", "whyempty_explain"]
+    scenario_order = list(SCENARIO_NAMES)
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "whyempty_version": __version__,
@@ -214,24 +297,43 @@ def main(argv: Sequence[str] | None = None) -> None:
         "methodology": {
             "input": "prebuilt list(range(size)); construction excluded",
             "predicates": ["x % 2 == 0", "x < size * 0.8", "x % 5 == 0"],
-            "baseline": "three sequential list comprehensions using identical predicates",
+            "baselines": {
+                "python": "three sequential list comprehensions using identical predicates",
+                "python_all": (
+                    "all three predicates evaluated for each input; then combine decisions"
+                ),
+            },
+            "ratios": {
+                "to_python": "all scenarios compared with sequential python baseline",
+                "to_equivalent_baseline": (
+                    "whyempty scenarios compare with python; "
+                    "audit scenarios compare with python_all"
+                ),
+            },
             "timing": "median perf_counter batch time / number; tracemalloc disabled",
             "timing_order": {
                 "method": "interleaved rounds; rotate starting scenario by one each round",
                 "warmup": "warmup calls for each scenario before timed rounds",
                 "gc": "collect immediately before each scenario batch, outside timing",
                 "rounds": [
-                    scenario_order[index % 3 :] + scenario_order[: index % 3]
+                    scenario_order[index % len(scenario_order) :]
+                    + scenario_order[: index % len(scenario_order)]
                     for index in range(args.repeat)
                 ],
             },
             "memory": "median incremental tracemalloc peak; one live result; separate pass",
             "includes": (
-                "trace materialization, provenance, stages; explain only in whyempty_explain"
+                "input materialization, filtering and metadata; explain only in *_explain; "
+                "audit_explain also includes relax(2), matching_indices(without=(2,)), "
+                "and suggest_relaxations()"
             ),
-            "excludes": "input construction, validation, imports, warmups, JSON and table output",
+            "excludes": (
+                "input and Pipeline configuration construction, validation, imports, warmups, "
+                "JSON and table output"
+            ),
             "limitations": (
-                "traced Python allocations, not RSS; synthetic integer workload; host noise"
+                "traced Python allocations, not RSS; synthetic integer workload; host noise; "
+                "nonempty audit means suggest_relaxations returns no candidates"
             ),
         },
         "results": results,

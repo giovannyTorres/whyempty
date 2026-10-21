@@ -67,3 +67,60 @@ class Rejection:
             "step_index": self.step_index,
             "filter_name": self.filter_name,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class FilterStats:
+    """Independent audit counts for a one-based filter index.
+
+    ``exclusive_failures`` counts occurrences that failed only this filter;
+    disabling it alone would rescue exactly that many recorded outcomes.
+    """
+
+    index: int
+    name: str
+    tested: int
+    passed: int
+    failed: int
+    exclusive_failures: int
+
+    @property
+    def retention_pct(self) -> float | None:
+        """Percent of all input occurrences passing this filter, or None if empty."""
+        return 100.0 * self.passed / self.tested if self.tested else None
+
+    def to_dict(self) -> dict[str, int | float | str | None]:
+        """Return JSON-compatible aggregate counts, without occurrence data."""
+        return {
+            "index": self.index,
+            "name": self.name,
+            "tested": self.tested,
+            "passed": self.passed,
+            "failed": self.failed,
+            "exclusive_failures": self.exclusive_failures,
+            "retention_pct": self.retention_pct,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class Relaxation:
+    """Projected counts after disabling filters in already recorded audit outcomes.
+
+    Filter indices are one-based. ``remaining`` includes existing matches;
+    ``rescued`` counts previously rejected occurrences that would also match.
+    These projections do not rerun predicates or return original records.
+    """
+
+    filter_indices: tuple[int, ...]
+    filter_names: tuple[str, ...]
+    remaining: int
+    rescued: int
+
+    def to_dict(self) -> dict[str, object]:
+        """Return JSON-compatible filter identities and projected counts."""
+        return {
+            "filter_indices": list(self.filter_indices),
+            "filter_names": list(self.filter_names),
+            "remaining": self.remaining,
+            "rescued": self.rescued,
+        }

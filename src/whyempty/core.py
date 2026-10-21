@@ -12,6 +12,15 @@ from .models import Rejection, Step
 T = TypeVar("T")
 
 
+def _validate_filter(name: str, predicate: Callable[[T], object]) -> None:
+    if not isinstance(name, str):
+        raise TypeError("Filter name must be a string.")
+    if not name.strip() or not name.isprintable():
+        raise ValueError("Filter name must be nonblank and printable.")
+    if not callable(predicate):
+        raise TypeError("Predicate must be callable.")
+
+
 class FilterError(RuntimeError):
     """A predicate or its truth conversion failed; ``__cause__`` is preserved.
 
@@ -94,12 +103,7 @@ class Trace(Generic[T]):
         """
         if self._filtering:
             raise RuntimeError("Cannot call keep() reentrantly on the same trace.")
-        if not isinstance(name, str):
-            raise TypeError("Filter name must be a string.")
-        if not name.strip() or not name.isprintable():
-            raise ValueError("Filter name must be nonblank and printable.")
-        if not callable(predicate):
-            raise TypeError("Predicate must be callable.")
+        _validate_filter(name, predicate)
 
         self._filtering = True
         try:

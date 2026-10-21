@@ -1,6 +1,6 @@
-# whyempty 0.1.0 design
+# whyempty 0.2.0 design
 
-## Public contract
+## Sequential trace contract (compatible with 0.1)
 
 `trace(iterable)` eagerly consumes an iterable once into `Trace[T]`. A trace is
 mutable: `keep(name, predicate)` returns the same object. `items` is a tuple of
@@ -54,6 +54,69 @@ O(N + K). `items`, `count`, and `is_empty` reads are O(1); `steps`,
 `rejected()` scans N markers and allocates O(R) metadata objects for R rejections.
 These costs exclude memory and work inside user predicates. Infinite inputs are
 unsupported because input materialization is eager.
+
+## Reusable pipelines and independent audit
+
+`Pipeline[T]` is a mutable reusable list of named callables. `keep` validates
+without executing; `run` and `audit` snapshot rules before consuming input.
+Configuration mutations during iteration or a predicate affect later runs only.
+Pipeline configuration retains callables; its results do not. Predicates and
+their state are shared with the caller. The pipeline is not thread safe.
+
+`run` produces the existing sequential `Trace`. `audit` consumes input once in
+record-major order, evaluating each rule once per occurrence, including truth
+conversion. Failed guards do not suppress later evaluations. Each rule must be
+defined on every occurrence. Exceptions preserve positional context and cause;
+an audit aborts without a partial result. Iteration errors and `BaseException`
+propagate unchanged.
+
+`AuditResult` stores survivor references, one failure mask per original position,
+aggregated mask frequencies, and frozen `FilterStats`. Each rule has `tested=N`
+and `passed + failed=N`. `exclusive_failures` counts masks containing only that
+rule's bit. An occurrence survives iff its mask is zero. All failed rules can be
+inspected by original position, without hashing records.
+
+Disabling mask D preserves a failure mask F iff `F & ~D == 0`.
+`relax(*indices)` sums matching frequencies and returns a frozen `Relaxation`:
+sorted unique one-based identities, remaining count, and newly rescued count.
+`matching_indices(without=...)` projects original positions. Both use cached
+decisions without accessing predicates or fields. Projections apply exactly to
+recorded outcomes; repeating them requires stable predicates and unchanged data.
+Disabling no rules is valid; disabling all recovers all original positions.
+
+## Fewest-filter suggestions
+
+Only an empty result with nonempty input needs suggestions. Find the minimum
+`bit_count` among observed failure masks and select those masks, ranked by
+frequency descending and then lexicographic filter-index tuple. A proper failed
+subset would have smaller cardinality; disabling a selected mask therefore
+restores exactly its own frequency. This is minimum cardinality, not all
+inclusion-minimal sets or an optimization for maximum matches. Failure patterns
+`{A}` and `{B,C}` suggest only `{A}`; inspect the latter with `relax`.
+Suggestions do not establish logical incompatibility outside the supplied data
+and do not modify configuration.
+
+No 2^K subsets are enumerated. For U observed patterns, finding the fewest bits
+scans U masks. Ranking the top L uses a bounded heap; comparisons also inspect
+filter bits. Queries never reevaluate user code. Positive integer limits are
+validated even for empty input. Boolean indices/limits are rejected, invalid
+index types raise TypeError, and out-of-range indices raise IndexError. Negative
+original positions are invalid.
+
+## Audit cost and serialization
+
+There are exactly N×K predicate calls, without per-call timers. The wall timer
+includes input iteration and outcome recording, excluding formatting. For W
+machine words per K-bit integer, masks and frequencies use O((N + U)W + K)
+space plus survivors. Counter keys represent outcomes, never records. Integer
+operations scale with W as K grows; Python integers impose no 64-filter limit.
+
+`relax` scans U patterns; `matching_indices` scans N masks; `failed_filters`
+extracts set bits for one occurrence. `explain` and `to_dict` compute up to five
+suggestions. Audit summaries include aggregate statistics and suggestions, not
+per-occurrence masks or values. Models serialize identity tuples as lists.
+Public tuples and frozen models give detached metadata views; mutable user
+objects are still shared references.
 
 ## Related work and packaging research
 

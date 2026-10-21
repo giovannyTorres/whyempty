@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import FrozenInstanceError
+from importlib.metadata import version
 
 import pytest
 
@@ -18,7 +19,7 @@ def records() -> list[dict[str, object]]:
 
 
 def test_version_and_public_constructor() -> None:
-    assert __version__ == "0.1.0"
+    assert __version__ == version("whyempty")
     assert isinstance(trace([1]), Trace)
     assert Trace([1, 2]).items == (1, 2)
 

@@ -42,22 +42,30 @@ source distribution for the intended version; never upload stale artifacts.
 
 ### Publishing with GitHub Actions
 
-Publication requires the maintainer's authorization and a PyPI API token. Store
-the token as a repository Actions secret named `TWINE_PASSWORD`; never put it in
-source code, issues, chat, or workflow input fields. The workflow supplies the
-required `__token__` username automatically.
+The default manual publication method is PyPI Trusted Publishing. In the PyPI
+project's **Publishing** settings, register this GitHub publisher:
 
-After reviewing a version on `main`, open **Actions → Publish to PyPI → Run
-workflow**, select `main`, and run it. A maintainer can also start publication by
-creating a `release/pypi-*` branch at the reviewed commit. Ordinary pushes to
-`main` do not publish anything.
+- Owner: `giovannyTorres`
+- Repository: `whyempty`
+- Workflow filename: `publish.yml`
+- Environment: leave blank (this workflow does not select an environment)
 
-The workflow checks the secret is configured, runs tests, coverage, lint and type
-checks, builds distributions, validates them, and uploads them to PyPI. It never
-prints the token and does not skip existing uploads. Check the workflow result,
-then verify the version from a fresh environment using `pip install whyempty`.
-PyPI does not allow replacing an existing distribution; increment the version
-for subsequent releases.
+Registration is a separate PyPI account operation; adding a workflow does not
+register the publisher. After registration, open **Actions → Publish to PyPI →
+Run workflow**, select the reviewed commit on `main`, keep
+`trusted-publishing`, and run it. GitHub supplies short-lived OpenID Connect
+credentials; no PyPI API token is needed for this method.
+
+For a project still migrating its publisher registration, explicitly select
+`api-token` using the existing repository Actions secret `TWINE_PASSWORD`.
+Legacy `release/pypi-*` branch pushes also select this token method. Never put
+the token in source code, issues, chat, or workflow inputs. Once Trusted
+Publishing is verified, remove the legacy token and branch trigger.
+
+Both methods run tests, coverage, lint and type checks, build distributions,
+and validate them before upload. Ordinary pushes to `main` do not publish.
+Verify the workflow result and the version from a fresh environment. PyPI
+distributions cannot be replaced; increment the version for every release.
 
 ### Publishing locally
 
@@ -66,7 +74,7 @@ manual maintainer commands for an authorized release:
 
 ```sh
 python -m twine upload --repository testpypi dist/*
-python -m pip install --index-url https://test.pypi.org/simple/ --no-deps whyempty==0.2.0
+python -m pip install --index-url https://test.pypi.org/simple/ --no-deps whyempty==0.2.1
 # After verifying the TestPyPI installation and approving the release:
 python -m twine upload dist/*
 ```

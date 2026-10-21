@@ -9,7 +9,7 @@ Python 3.10+, MIT licensed, **zero required runtime dependencies**.
 ## Install
 
 ```sh
-python -m pip install whyempty==0.2.0
+python -m pip install whyempty==0.2.1
 ```
 
 For a source checkout:

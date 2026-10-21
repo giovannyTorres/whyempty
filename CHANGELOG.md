@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Pin GitHub Actions dependencies to reviewed commit SHAs.
+- Support PyPI Trusted Publishing as the default manual release method. Keep
+  explicit API-token publication for maintainers migrating existing projects.
+
 ## 0.2.0
 
 - Add reusable `Pipeline` definitions. `Pipeline.run()` produces the same

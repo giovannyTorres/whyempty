@@ -1,9 +1,11 @@
 """Empty pipelines, one-shot inputs, and explicit failure behavior."""
 
+import copy
 import gc
 import json
+import pickle
 import weakref
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import pytest
 
@@ -71,6 +73,25 @@ def test_missing_dictionary_key_has_context_and_original_cause() -> None:
     assert result.count == 2
     assert result.steps == ()
     assert result.rejected() == ()
+
+
+@pytest.mark.parametrize(
+    "restore", [copy.copy, copy.deepcopy, lambda error: pickle.loads(pickle.dumps(error))]
+)
+def test_filter_error_reconstruction_preserves_diagnostic_context(
+    restore: Callable[[FilterError], FilterError],
+) -> None:
+    result = trace([{"key": True}, {}])
+    with pytest.raises(FilterError) as caught:
+        result.keep("required key", lambda row: row["key"])
+    error = caught.value
+    restored = restore(error)
+    assert restored is not error
+    assert type(restored) is FilterError
+    assert restored.args == error.args
+    assert restored.filter_name == "required key"
+    assert restored.step_index == 1
+    assert restored.original_index == 1
 
 
 def test_failed_stage_is_atomic_and_trace_can_be_reused() -> None:

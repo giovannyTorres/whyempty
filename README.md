@@ -9,20 +9,19 @@ runtime dependencies**. Python 3.10 or newer is required.
 
 ## Installation
 
-Version 0.1.0 is prepared for release and has not yet been published by this
-project. Install from the repository today:
+Install version 0.1.0 from PyPI:
+
+```sh
+python -m pip install whyempty==0.1.0
+```
+
+To install from source and run the example:
 
 ```sh
 git clone https://github.com/giovannyTorres/whyempty.git
 cd whyempty
 python -m pip install -e .
 python examples/basic_usage.py
-```
-
-After the maintainer publishes 0.1.0 to PyPI:
-
-```sh
-python -m pip install whyempty==0.1.0
 ```
 
 ## Quick start

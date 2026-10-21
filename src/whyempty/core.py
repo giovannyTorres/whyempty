@@ -28,6 +28,10 @@ class FilterError(RuntimeError):
             f"original index {original_index}. The stage was not committed."
         )
 
+    def __reduce__(self) -> tuple[type[FilterError], tuple[str, int, int], dict[str, object]]:
+        """Preserve diagnostic attributes when copying or pickling the exception."""
+        return type(self), (self.filter_name, self.step_index, self.original_index), self.__dict__
+
 
 class Trace(Generic[T]):
     """A mutable filter pipeline that consumes input once and records each stage.

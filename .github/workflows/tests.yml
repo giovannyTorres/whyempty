@@ -27,6 +27,7 @@ jobs:
       - run: python -m pip install -e '.[dev]'
       - run: python -m pytest --cov=whyempty --cov-report=term-missing
       - run: python examples/basic_usage.py
+      - run: python examples/audit_usage.py
 
   quality:
     runs-on: ubuntu-latest
@@ -61,33 +62,39 @@ jobs:
           python - <<'PY'
           import email
           import tarfile
+          import tomllib
           import zipfile
           from pathlib import Path
 
-          wheel = next(Path("dist").glob("*.whl"))
-          sdist = next(Path("dist").glob("*.tar.gz"))
+          project = tomllib.loads(Path("pyproject.toml").read_text())["project"]
+          wheels = list(Path("dist").glob("*.whl"))
+          sdists = list(Path("dist").glob("*.tar.gz"))
+          assert len(wheels) == len(sdists) == 1, "Expected exactly one wheel and one sdist"
+          wheel, sdist = wheels[0], sdists[0]
+          package_root = Path("src/whyempty")
           required = {
-              "__init__.py", "core.py", "models.py", "formatting.py", "py.typed"
-          }
+              path.relative_to(package_root).as_posix()
+              for path in package_root.rglob("*.py")
+          } | {"py.typed"}
           with zipfile.ZipFile(wheel) as archive:
               files = set(archive.namelist())
               assert all(f"whyempty/{name}" in files for name in required)
               assert any(name.endswith("/licenses/LICENSE") for name in files)
               metadata_name = next(name for name in files if name.endswith("/METADATA"))
               metadata = email.message_from_bytes(archive.read(metadata_name))
-              assert metadata["Version"] == "0.1.0"
-              assert metadata["Requires-Python"] == ">=3.10"
+              assert metadata["Version"] == project["version"]
+              assert metadata["Requires-Python"] == project["requires-python"]
               assert all(
                   "extra ==" in requirement
                   for requirement in metadata.get_all("Requires-Dist", [])
               ), "Unexpected required runtime dependency"
           with tarfile.open(sdist) as archive:
               files = set(archive.getnames())
-              prefix = "whyempty-0.1.0/"
+              prefix = f"whyempty-{project['version']}/"
               assert all(prefix + "src/whyempty/" + name in files for name in required)
               required_source = [
-                  "LICENSE", "README.md", "pyproject.toml", "CONTRIBUTING.md",
-                  "examples/basic_usage.py", "benchmarks/benchmark.py",
+                  "LICENSE", "README.md", "pyproject.toml", "CONTRIBUTING.md", "CHANGELOG.md",
+                  "examples/basic_usage.py", "examples/audit_usage.py", "benchmarks/benchmark.py",
                   "benchmarks/results.json", "docs/design.md",
               ]
               assert all(prefix + name in files for name in required_source)
@@ -97,6 +104,26 @@ jobs:
           python -m venv /tmp/whyempty-wheel
           /tmp/whyempty-wheel/bin/python -m pip install --no-deps dist/*.whl
           cd /tmp
-          /tmp/whyempty-wheel/bin/python -c 'from whyempty import trace; result = trace([1, 2]).keep("none", lambda x: False); assert result.count == 0; assert "EMPTY" in result.explain()'
+          /tmp/whyempty-wheel/bin/python - <<'PY'
+          from importlib.metadata import version
+
+          from whyempty import Pipeline, __version__, trace
+
+          assert __version__ == version("whyempty")
+          result = trace([1, 2]).keep("none", lambda value: False)
+          assert result.count == 0
+          assert "EMPTY" in result.explain()
+          pipeline = (
+              Pipeline[int]()
+              .keep("even", lambda value: value % 2 == 0)
+              .keep("odd", lambda value: value % 2 != 0)
+          )
+          assert pipeline.run([1, 2]).is_empty
+          audit = pipeline.audit([1, 2])
+          assert audit.relax(1).remaining == 1
+          assert audit.matching_indices(without=(1,)) == (0,)
+          assert audit.failed_filters(0)[0].index == 1
+          assert len(audit.suggest_relaxations()) == 2
+          PY
       - name: Build an installable wheel from the sdist
         run: python -m pip wheel --no-deps --wheel-dir /tmp/whyempty-from-sdist dist/*.tar.gz

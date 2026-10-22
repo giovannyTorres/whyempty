@@ -11,3 +11,4 @@ coverage.xml
 build/
 dist/
 *.egg-info/
+benchmarks/smoke.json

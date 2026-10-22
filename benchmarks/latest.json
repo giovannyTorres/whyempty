@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-10-22T05:56:40.061561+00:00",
+  "package": "whyempty",
+  "versions": {
+    "whyempty": "0.2.1"
+  },
+  "python": "3.13.5",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "machine": "AMD64",
+  "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "logical_cpus": 16,
+  "base_commit": "fab9a430575a950a264c41e008d0a6fadd554b43",
+  "source_sha256_lf": {
+    "benchmarks/reproduce.py": "764f81ceb99824327973e084a258edb37d572f5c9e0700bf605542b45c5e832f",
+    "benchmarks/benchmark.py": "c1ee004dcb96485edd13de8951e9b4cfb0e7cf058fae8a4b62165159b5dd396f",
+    "examples/comparison.py": "de5c8fc2cc12dd16edda6df90725dce97b0dc0d8aead248471707ea689bcfe4b",
+    "examples/cookbook.py": "bc0321f20a2e05c443491b6a6eb486cdbc3885f219fa05deac0c3be606e7720e"
+  },
+  "command": "python benchmarks/reproduce.py --repeat 5",
+  "quick": false,
+  "repeats": 5,
+  "warmup_per_operation": 2,
+  "memory_repeats": 2,
+  "methodology": {
+    "time": "interleaved rotating order; perf_counter; GC collection before sample outside timer; input construction excluded",
+    "memory": "separate tracemalloc passes, result alive; Python allocation peak, not total RSS; input construction excluded",
+    "accuracy": "differential assertions before timing; comparison and cookbook assertions also executed",
+    "ease_of_use": "physical lines and AST statements in comparison functions, excluding fixtures and imports; a code-size proxy, not a user study",
+    "limitations": "deterministic synthetic workloads; one host; diagnostics differ in scope; no statistical confidence intervals or R execution comparison"
+  },
+  "comparison_code_size": {
+    "baseline": {
+      "physical_lines": 4,
+      "statements": 3
+    },
+    "library": {
+      "physical_lines": 8,
+      "statements": 1
+    }
+  },
+  "workloads": [
+    {
+      "input_size": 1000,
+      "accuracy": "identical survivors checked for all six scenarios",
+      "measurements": [
+        {
+          "scenario": "python",
+          "seconds_per_operation": [
+            0.00011899999996482317,
+            0.00011666666675106778,
+            0.00011953333311491103,
+            0.00012040000001434237,
+            0.00012066666689255119
+          ],
+          "median_seconds": 0.00011953333311491103,
+          "traced_peak_bytes": [
+            7520,
+            7520
+          ],
+          "median_peak_bytes": 7520.0,
+          "time_ratio_to_python": 1.0,
+          "time_overhead_percent": 0.0,
+          "peak_ratio_to_python": 1.0,
+          "peak_overhead_percent": 0.0,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 1.0,
+          "time_overhead_percent_to_equivalent_baseline": 0.0,
+          "peak_ratio_to_equivalent_baseline": 1.0,
+          "peak_overhead_percent_to_equivalent_baseline": 0.0
+        },
+        {
+          "scenario": "whyempty",
+          "seconds_per_operation": [
+            0.00023453333354458059,
+            0.000239766666709329,
+            0.0002510999999382572,
+            0.0002389666666810323,
+            0.0002405666667376257
+          ],
+          "median_seconds": 0.000239766666709329,
+          "traced_peak_bytes": [
+            61336,
+            61336
+          ],
+          "median_peak_bytes": 61336.0,
+          "time_ratio_to_python": 2.005856111105293,
+          "time_overhead_percent": 100.5856111105293,
+          "peak_ratio_to_python": 8.156382978723403,
+          "peak_overhead_percent": 715.6382978723403,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 2.005856111105293,
+          "time_overhead_percent_to_equivalent_baseline": 100.5856111105293,
+          "peak_ratio_to_equivalent_baseline": 8.156382978723403,
+          "peak_overhead_percent_to_equivalent_baseline": 715.6382978723403
+        },
+        {
+          "scenario": "whyempty_explain",
+          "seconds_per_operation": [
+            0.0002535333333071321,
+            0.00025213333356077783,
+            0.00027053333360527176,
+            0.0002491666667386501,
+            0.0002890666664825403
+          ],
+          "median_seconds": 0.0002535333333071321,
+          "traced_peak_bytes": [
+            61336,
+            61336
+          ],
+          "median_peak_bytes": 61336.0,
+          "time_ratio_to_python": 2.1210262167072913,
+          "time_overhead_percent": 112.10262167072914,
+          "peak_ratio_to_python": 8.156382978723403,
+          "peak_overhead_percent": 715.6382978723403,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 2.1210262167072913,
+          "time_overhead_percent_to_equivalent_baseline": 112.10262167072914,
+          "peak_ratio_to_equivalent_baseline": 8.156382978723403,
+          "peak_overhead_percent_to_equivalent_baseline": 715.6382978723403
+        },
+        {
+          "scenario": "python_all",
+          "seconds_per_operation": [
+            0.0002601999998053846,
+            0.0003262999998696614,
+            0.0002570999998473174,
+            0.00026900000011664815,
+            0.0002590000000661045
+          ],
+          "median_seconds": 0.0002601999998053846,
+          "traced_peak_bytes": [
+            976,
+            976
+          ],
+          "median_peak_bytes": 976.0,
+          "time_ratio_to_python": 2.1767986638107586,
+          "time_overhead_percent": 117.67986638107585,
+          "peak_ratio_to_python": 0.12978723404255318,
+          "peak_overhead_percent": -87.02127659574468,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 1.0,
+          "time_overhead_percent_to_equivalent_baseline": 0.0,
+          "peak_ratio_to_equivalent_baseline": 1.0,
+          "peak_overhead_percent_to_equivalent_baseline": 0.0
+        },
+        {
+          "scenario": "audit",
+          "seconds_per_operation": [
+            0.0006693333334624185,
+            0.0006714666666690997,
+            0.0008092999999765501,
+            0.0006710999999389363,
+            0.0006621333335109133
+          ],
+          "median_seconds": 0.0006710999999389363,
+          "traced_peak_bytes": [
+            20424,
+            20424
+          ],
+          "median_peak_bytes": 20424.0,
+          "time_ratio_to_python": 5.614333528989671,
+          "time_overhead_percent": 461.4333528989671,
+          "peak_ratio_to_python": 2.7159574468085106,
+          "peak_overhead_percent": 171.59574468085106,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 2.579169871025682,
+          "time_overhead_percent_to_equivalent_baseline": 157.9169871025682,
+          "peak_ratio_to_equivalent_baseline": 20.92622950819672,
+          "peak_overhead_percent_to_equivalent_baseline": 1992.622950819672
+        },
+        {
+          "scenario": "audit_explain",
+          "seconds_per_operation": [
+            0.0007469000001947279,
+            0.000775433333425705,
+            0.0007454999998420438,
+            0.0007670333334317547,
+            0.0007441000000956896
+          ],
+          "median_seconds": 0.0007469000001947279,
+          "traced_peak_bytes": [
+            20424,
+            20424
+          ],
+          "median_peak_bytes": 20424.0,
+          "time_ratio_to_python": 6.248466270715552,
+          "time_overhead_percent": 524.8466270715552,
+          "peak_ratio_to_python": 2.7159574468085106,
+          "peak_overhead_percent": 171.59574468085106,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 2.870484245785428,
+          "time_overhead_percent_to_equivalent_baseline": 187.04842457854278,
+          "peak_ratio_to_equivalent_baseline": 20.92622950819672,
+          "peak_overhead_percent_to_equivalent_baseline": 1992.622950819672
+        }
+      ]
+    },
+    {
+      "input_size": 10000,
+      "accuracy": "identical survivors checked for all six scenarios",
+      "measurements": [
+        {
+          "scenario": "python",
+          "seconds_per_operation": [
+            0.001134499999958886,
+            0.0011556666665152686,
+            0.00119160000000799,
+            0.0011883999998948032,
+            0.001150000000052387
+          ],
+          "median_seconds": 0.0011556666665152686,
+          "traced_peak_bytes": [
+            74976,
+            74976
+          ],
+          "median_peak_bytes": 74976.0,
+          "time_ratio_to_python": 1.0,
+          "time_overhead_percent": 0.0,
+          "peak_ratio_to_python": 1.0,
+          "peak_overhead_percent": 0.0,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 1.0,
+          "time_overhead_percent_to_equivalent_baseline": 0.0,
+          "peak_ratio_to_equivalent_baseline": 1.0,
+          "peak_overhead_percent_to_equivalent_baseline": 0.0
+        },
+        {
+          "scenario": "whyempty",
+          "seconds_per_operation": [
+            0.002223433333407835,
+            0.002225466666762562,
+            0.0023530333334444244,
+            0.0024794000000838423,
+            0.0022023000001354376
+          ],
+          "median_seconds": 0.002225466666762562,
+          "traced_peak_bytes": [
+            678328,
+            678328
+          ],
+          "median_peak_bytes": 678328.0,
+          "time_ratio_to_python": 1.925699452311026,
+          "time_overhead_percent": 92.56994523110261,
+          "peak_ratio_to_python": 9.047268459240291,
+          "peak_overhead_percent": 804.7268459240291,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 1.925699452311026,
+          "time_overhead_percent_to_equivalent_baseline": 92.56994523110261,
+          "peak_ratio_to_equivalent_baseline": 9.047268459240291,
+          "peak_overhead_percent_to_equivalent_baseline": 804.7268459240291
+        },
+        {
+          "scenario": "whyempty_explain",
+          "seconds_per_operation": [
+            0.0023233000001710025,
+            0.0023330666666273223,
+            0.002283066666677769,
+            0.002156733333322336,
+            0.0021372666666745013
+          ],
+          "median_seconds": 0.002283066666677769,
+          "traced_peak_bytes": [
+            678328,
+            678328
+          ],
+          "median_peak_bytes": 678328.0,
+          "time_ratio_to_python": 1.975540813651741,
+          "time_overhead_percent": 97.5540813651741,
+          "peak_ratio_to_python": 9.047268459240291,
+          "peak_overhead_percent": 804.7268459240291,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 1.975540813651741,
+          "time_overhead_percent_to_equivalent_baseline": 97.5540813651741,
+          "peak_ratio_to_equivalent_baseline": 9.047268459240291,
+          "peak_overhead_percent_to_equivalent_baseline": 804.7268459240291
+        },
+        {
+          "scenario": "python_all",
+          "seconds_per_operation": [
+            0.0026218666668379833,
+            0.002526900000096551,
+            0.0025003999999171356,
+            0.0026266999999885834,
+            0.0027643666665729447
+          ],
+          "median_seconds": 0.0026218666668379833,
+          "traced_peak_bytes": [
+            7120,
+            7120
+          ],
+          "median_peak_bytes": 7120.0,
+          "time_ratio_to_python": 2.2687049326635083,
+          "time_overhead_percent": 126.87049326635082,
+          "peak_ratio_to_python": 0.0949637217242851,
+          "peak_overhead_percent": -90.50362782757149,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 1.0,
+          "time_overhead_percent_to_equivalent_baseline": 0.0,
+          "peak_ratio_to_equivalent_baseline": 1.0,
+          "peak_overhead_percent_to_equivalent_baseline": 0.0
+        },
+        {
+          "scenario": "audit",
+          "seconds_per_operation": [
+            0.0067995666668139165,
+            0.006585366666513437,
+            0.006549033333309732,
+            0.006691700000070948,
+            0.006699233333468631
+          ],
+          "median_seconds": 0.006691700000070948,
+          "traced_peak_bytes": [
+            180840,
+            180840
+          ],
+          "median_peak_bytes": 180840.0,
+          "time_ratio_to_python": 5.790337468371151,
+          "time_overhead_percent": 479.0337468371151,
+          "peak_ratio_to_python": 2.4119718309859155,
+          "peak_overhead_percent": 141.19718309859155,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 2.5522655612923497,
+          "time_overhead_percent_to_equivalent_baseline": 155.22655612923498,
+          "peak_ratio_to_equivalent_baseline": 25.39887640449438,
+          "peak_overhead_percent_to_equivalent_baseline": 2439.887640449438
+        },
+        {
+          "scenario": "audit_explain",
+          "seconds_per_operation": [
+            0.0072116000001187786,
+            0.0071788999997200635,
+            0.007863966666567043,
+            0.007325566666622763,
+            0.007100299999971564
+          ],
+          "median_seconds": 0.0072116000001187786,
+          "traced_peak_bytes": [
+            180840,
+            180840
+          ],
+          "median_peak_bytes": 180840.0,
+          "time_ratio_to_python": 6.240207673259476,
+          "time_overhead_percent": 524.0207673259475,
+          "peak_ratio_to_python": 2.4119718309859155,
+          "peak_overhead_percent": 141.19718309859155,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 2.7505593977500364,
+          "time_overhead_percent_to_equivalent_baseline": 175.05593977500365,
+          "peak_ratio_to_equivalent_baseline": 25.39887640449438,
+          "peak_overhead_percent_to_equivalent_baseline": 2439.887640449438
+        }
+      ]
+    },
+    {
+      "input_size": 50000,
+      "accuracy": "identical survivors checked for all six scenarios",
+      "measurements": [
+        {
+          "scenario": "python",
+          "seconds_per_operation": [
+            0.005979199999880318,
+            0.0056860666666883235,
+            0.0059428333333926275,
+            0.005658099999891419,
+            0.0058092999997825245
+          ],
+          "median_seconds": 0.0058092999997825245,
+          "traced_peak_bytes": [
+            392128,
+            392128
+          ],
+          "median_peak_bytes": 392128.0,
+          "time_ratio_to_python": 1.0,
+          "time_overhead_percent": 0.0,
+          "peak_ratio_to_python": 1.0,
+          "peak_overhead_percent": 0.0,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 1.0,
+          "time_overhead_percent_to_equivalent_baseline": 0.0,
+          "peak_ratio_to_equivalent_baseline": 1.0,
+          "peak_overhead_percent_to_equivalent_baseline": 0.0
+        },
+        {
+          "scenario": "whyempty",
+          "seconds_per_operation": [
+            0.013163966666676666,
+            0.012064033333444968,
+            0.011797966666563298,
+            0.013461633333160231,
+            0.014053499999742295
+          ],
+          "median_seconds": 0.013163966666676666,
+          "traced_peak_bytes": [
+            3449880,
+            3449880
+          ],
+          "median_peak_bytes": 3449880.0,
+          "time_ratio_to_python": 2.2660159859483016,
+          "time_overhead_percent": 126.60159859483015,
+          "peak_ratio_to_python": 8.797841521135956,
+          "peak_overhead_percent": 779.7841521135956,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 2.2660159859483016,
+          "time_overhead_percent_to_equivalent_baseline": 126.60159859483015,
+          "peak_ratio_to_equivalent_baseline": 8.797841521135956,
+          "peak_overhead_percent_to_equivalent_baseline": 779.7841521135956
+        },
+        {
+          "scenario": "whyempty_explain",
+          "seconds_per_operation": [
+            0.011916866666676166,
+            0.012101599999975102,
+            0.012363966666574319,
+            0.011947699999836914,
+            0.012155300000207111
+          ],
+          "median_seconds": 0.012101599999975102,
+          "traced_peak_bytes": [
+            3449880,
+            3449880
+          ],
+          "median_peak_bytes": 3449880.0,
+          "time_ratio_to_python": 2.0831425473685528,
+          "time_overhead_percent": 108.31425473685528,
+          "peak_ratio_to_python": 8.797841521135956,
+          "peak_overhead_percent": 779.7841521135956,
+          "baseline_scenario": "python",
+          "time_ratio_to_equivalent_baseline": 2.0831425473685528,
+          "time_overhead_percent_to_equivalent_baseline": 108.31425473685528,
+          "peak_ratio_to_equivalent_baseline": 8.797841521135956,
+          "peak_overhead_percent_to_equivalent_baseline": 779.7841521135956
+        },
+        {
+          "scenario": "python_all",
+          "seconds_per_operation": [
+            0.013098500000220762,
+            0.013302666666883548,
+            0.012590599999991051,
+            0.012809066666704894,
+            0.012597033333198246
+          ],
+          "median_seconds": 0.012809066666704894,
+          "traced_peak_bytes": [
+            33232,
+            33232
+          ],
+          "median_peak_bytes": 33232.0,
+          "time_ratio_to_python": 2.2049242881559588,
+          "time_overhead_percent": 120.49242881559587,
+          "peak_ratio_to_python": 0.08474783744083565,
+          "peak_overhead_percent": -91.52521625591643,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 1.0,
+          "time_overhead_percent_to_equivalent_baseline": 0.0,
+          "peak_ratio_to_equivalent_baseline": 1.0,
+          "peak_overhead_percent_to_equivalent_baseline": 0.0
+        },
+        {
+          "scenario": "audit",
+          "seconds_per_operation": [
+            0.033869400000185124,
+            0.036461133333129205,
+            0.03341703333353507,
+            0.03362960000019181,
+            0.033298966666734486
+          ],
+          "median_seconds": 0.03362960000019181,
+          "traced_peak_bytes": [
+            911816,
+            911816
+          ],
+          "median_peak_bytes": 911816.0,
+          "time_ratio_to_python": 5.788924655543827,
+          "time_overhead_percent": 478.8924655543827,
+          "peak_ratio_to_python": 2.3253019422229477,
+          "peak_overhead_percent": 132.53019422229477,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 2.6254528042707856,
+          "time_overhead_percent_to_equivalent_baseline": 162.54528042707855,
+          "peak_ratio_to_equivalent_baseline": 27.437891189215215,
+          "peak_overhead_percent_to_equivalent_baseline": 2643.7891189215215
+        },
+        {
+          "scenario": "audit_explain",
+          "seconds_per_operation": [
+            0.036284600000120314,
+            0.036584600000120794,
+            0.0367878000000322,
+            0.036087233333394884,
+            0.03802073333311758
+          ],
+          "median_seconds": 0.036584600000120794,
+          "traced_peak_bytes": [
+            911816,
+            911816
+          ],
+          "median_peak_bytes": 911816.0,
+          "time_ratio_to_python": 6.297591792727242,
+          "time_overhead_percent": 529.7591792727242,
+          "peak_ratio_to_python": 2.3253019422229477,
+          "peak_overhead_percent": 132.53019422229477,
+          "baseline_scenario": "python_all",
+          "time_ratio_to_equivalent_baseline": 2.8561487696224246,
+          "time_overhead_percent_to_equivalent_baseline": 185.61487696224245,
+          "peak_ratio_to_equivalent_baseline": 27.437891189215215,
+          "peak_overhead_percent_to_equivalent_baseline": 2643.7891189215215
+        }
+      ]
+    }
+  ]
+}

@@ -1,67 +1,58 @@
-# Reproducing the benchmark
+# Reproduce the whyempty benchmarks
 
-After installing the development environment, run from the repository root:
+[Measured results](RESULTS.md) · [Raw measurements](latest.json) · [Driver](reproduce.py)
+
+## One-command measurement
+
+Clone this repository and use CPython 3.13.5 to reproduce the recorded environment. From the repository root:
 
 ```sh
-python benchmarks/benchmark.py --sizes 1000 10000 100000 --repeat 12 --number 20 --warmup 3 --memory-repeat 3 --json-output benchmarks/results.json
+python -m pip install -r benchmarks/requirements.txt
+python benchmarks/reproduce.py
 ```
 
-The six scenarios use the same three predicate callables: even integers, values
-below 80% of the input size, and values divisible by five. Identical surviving
-items are checked before measurement.
+The requirements file pins the public package and runtime dependencies measured in this run. To benchmark a changed checkout instead, install it with `python -m pip install -e .` after those pins and record that difference. The driver records the imported distribution version, base commit and SHA-256 digests of the benchmark and example sources with line endings normalized to LF.
 
-| Scenario | Operation | Equivalent predicate-evaluation baseline |
-| --- | --- | --- |
-| `python` | Three sequential list comprehensions | `python` |
-| `whyempty` | Construct a trace and apply three sequential filters | `python` |
-| `whyempty_explain` | Construct a trace and render its explanation | `python` |
-| `python_all` | Evaluate all three predicates for every occurrence and combine their decisions | `python_all` |
-| `audit` | Audit a preconfigured `Pipeline` | `python_all` |
-| `audit_explain` | Audit, explain, relax rule 2, query matching indices without rule 2, and request suggestions | `python_all` |
+The default run writes `benchmarks/latest.json` and regenerates `benchmarks/RESULTS.md`. It runs all comparison and cookbook assertions first, then checks each timed workload against its reference. A failing comparison aborts before publishing new measurements.
 
-The sequential baseline skips later predicates for items already removed. The
-full-evaluation baseline materializes each occurrence's three decisions before
-calling `all()`, deliberately preventing predicate short-circuiting. This matches
-the number and record-major order of predicate calls made by an audit; it does
-not retain the audit's decision cache or provenance. The trace baseline uses the
-same stage-major evaluation order as tracing.
+```sh
+# Small correctness/runner smoke check; writes only ignored smoke.json:
+python benchmarks/reproduce.py --quick
+# More observations on the same three sizes:
+python benchmarks/reproduce.py --repeat 9
+```
 
-Integer inputs, predicates, and `Pipeline` configuration are built before
-measurement; whyempty's own input materialization is included. `audit_explain`
-performs its queries on the newly created audit without reevaluating predicates.
-The workload has surviving items, so `suggest_relaxations()` returns no
-candidates. This scenario measures the nonempty-result suggestion path, not the
-search for relaxations of an empty result.
+## Inputs and equivalent work
 
-Elapsed time is the median of independent batches, divided by operations per
-batch. After warming up each scenario, every timing round measures all scenarios.
-The starting scenario rotates deterministically each round through the table's
-six scenarios. This balances execution order and reduces drift from changing
-host load. Use a multiple of six repeats to balance each scenario's position
-equally. Garbage collection keeps its normal enabled
-state, with a collection before each batch. Warmups, validation, imports, and
-output are excluded.
-`tracemalloc` is disabled for timing. Allocation peaks are measured separately,
-starting after input creation, with one result still alive at the measurement.
-Both intermediate allocations and retained output contribute to the peak.
+A prebuilt list(range(n)) and three stable rules: even values, below 80% of n and divisible by five. Six scenarios include filtering, diagnostics and full audits.
 
-The JSON records timing order, all timing and memory samples, medians, ratios,
-overhead percentages, interpreter, platform, and arguments. Existing
-`*_to_python` ratios and the table's `Time/Py` and `Peak/Py` columns always compare
-with sequential `python`. Each measurement's `baseline_scenario` identifies its
-equivalent evaluation baseline from the table; `*_to_equivalent_baseline` ratios
-and `Time/Base` and `Peak/Base` columns compare with that baseline. Their
-`*_overhead_percent_to_equivalent_baseline` fields express the corresponding
-percentage increase. A ratio of `2.0` means twice the baseline, or 100% overhead.
-The full baseline normalizes predicate calls, not the additional diagnostic
-capabilities. Memory means incremental Python allocations
-observed by `tracemalloc`, not process RSS. Numbers describe this synthetic
-integer workload on one host; predicates, selectivity, Python version, and host
-load affect results. There is no performance assertion in the test suite.
+The input generator is deterministic and included in the driver. Input construction, package imports, correctness assertions and output serialization are outside the measured operation. The fixture setup and reused state are the same for both compared operations.
 
-whyempty also stores original positions, first-failure metadata, stage statistics,
-and timers. Its atomic trace stages build temporary partitions before committing;
-audits store outcomes for every rule and occurrence to support cached queries.
-These operations explain expected overhead relative to comprehensions; the
-recorded measurements determine its magnitude. Rendering a diagnostic reads
-stage statistics and never reruns predicates.
+All six scenarios are checked for identical survivors before timing. Trace uses a sequential Python baseline; audit uses a baseline evaluating every rule on every record.
+
+The benchmark uses cheap integer predicates and nonempty results. It does not time suggestion ranking over many minimal failure patterns, expensive I/O predicates or concurrent mutation.
+
+## Timing and memory
+
+- Two warmups per operation, then five timed rounds by default.
+- Interleaved operations with a rotating starting order reduce fixed-order drift.
+- `perf_counter` measures elapsed time; garbage collection happens before each sample and outside its timer.
+- The standard paired driver retains the returned object until the timer stops. The whyempty six-scenario driver times batches of three operations; its full implementation is in benchmark.py.
+- Allocation peaks use two separate `tracemalloc` passes with a live result. They exclude the already constructed inputs and can exclude native allocations; they are not total process RSS.
+- Raw observations, medians, minimum/maximum times, package/Python/platform/CPU details and checked fixture outcomes are in latest.json. Whyempty retains the original six-scenario raw schema and computes its medians there.
+
+Run on an otherwise idle machine. Results vary with host load, CPU state, allocator, Python, dependency versions, data cardinality, width and dtype. These are single-host measurements with no confidence intervals. They are not service-level guarantees or a comparison against every possible optimized recipe.
+
+## Accuracy and ease of use
+
+Accuracy here means asserted agreement on the documented output fields, not a statistical significance claim or proof over all inputs. The core tests cover additional boundary cases and can be rerun with `python -m pip install -e ".[dev]"` followed by `python -m pytest`.
+
+The driver counts physical lines and AST statements in the checked comparison functions. Fixtures, imports and assertion scaffolding are excluded. This code-size proxy is inspectable; it does not measure learning time or productivity. The library may perform more diagnostic work and may take more source lines in a given example.
+
+## Historical and specialized runs
+
+The original `benchmark.py` and `results.json` are retained with their original workload and environment. `RESULTS.md` and `latest.json` identify the new measurements. Other benchmark scripts in this directory cover specialized cases and are not silently combined into the main table.
+
+Tracing and auditing add metadata storage and execution overhead. Auditing evaluates every rule on every record; a short-circuit filter can do less work.
+
+[What the package adds](../docs/comparison.md) · [Practical recipes](../docs/cookbook.md)
